@@ -6,12 +6,16 @@ public class MapBuilder : MonoBehaviour
 {
     [SerializeField] private Grid _grid;
     
+    // Поля для хранения цветов выделения тайла
     [SerializeField] private Color _highlightingColorRed;
     [SerializeField] private Color _highlightingColorGreen;
 
     private GameObject _tile;
-    private bool[,] _areObjectsInCells = new bool[10, 10];
+    
+    // массив равный игровому полю для постройки, чтобы отмечать уже занятые ячейки
+    private bool[,] _areObjectsInCells = new bool[10, 10]; 
 
+    
     private Renderer[] _renderers;
     private Color[] _originalColors;
 
@@ -24,8 +28,10 @@ public class MapBuilder : MonoBehaviour
     {
         _tile = Instantiate(tilePrefab);
 
+        // Получаем список рендеров всех частей тайла
         _renderers = _tile.GetComponentsInChildren<Renderer>();
 
+        // Сохраняем цвета частей тайла в отдельный список
         SaveTileOriginalColors();
     }
 
@@ -42,20 +48,27 @@ public class MapBuilder : MonoBehaviour
         // Debug.Log(cellPosition.ToString());
 
 
+        // если выбрали тайл
         if (_tile != null)
         {
+            // постоянно меняем позицию тайла, чтобы он был равен позиции курсора
             _tile.transform.position = cellCenterPosition;
 
+            // Красим тайл в соответсвии с возможностью построить
+            // Проверяем, чтобы координаты были внутри поля и что ячейка ещё не занята
             if (cellPosition.x < 10 && cellPosition.x >= 0 && cellPosition.z >= 0 && cellPosition.z < 10 &&
                 !_areObjectsInCells[cellPosition.x, cellPosition.z])
             {
+                // Подсвечиваем все части тайла зеленым
                 foreach (var rend in _renderers)
                 {
                     rend.material.color = _highlightingColorGreen;
                 }
 
+                
                 if (Input.GetKeyDown(KeyCode.Mouse0))
                 {
+                    // Возвращаем всем частям тайла оригинальный цвет
                     for (var i = 0; i < _renderers.Length; i++)
                     {
                         _renderers[i].material.color = _originalColors[i];
@@ -70,6 +83,7 @@ public class MapBuilder : MonoBehaviour
             }
             else
             {
+                // Подсвечиваем все части тайла красным
                 foreach (var rend in _renderers)
                 {
                     rend.material.color = _highlightingColorRed;
