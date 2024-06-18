@@ -1,21 +1,19 @@
-using System;
 using System.Linq;
 using UnityEngine;
 
 public class MapBuilder : MonoBehaviour
 {
     [SerializeField] private Grid _grid;
-    
+
     // Поля для хранения цветов выделения тайла
     [SerializeField] private Color _highlightingColorRed;
     [SerializeField] private Color _highlightingColorGreen;
 
     private GameObject _tile;
-    
-    // массив равный игровому полю для постройки, чтобы отмечать уже занятые ячейки
-    private bool[,] _areObjectsInCells = new bool[10, 10]; 
 
-    
+    // массив равный игровому полю для постройки, чтобы отмечать уже занятые ячейки
+    private bool[,] _areObjectsInCells = new bool[10, 10];
+
     private Renderer[] _renderers;
     private Color[] _originalColors;
 
@@ -37,64 +35,72 @@ public class MapBuilder : MonoBehaviour
 
     private void Update()
     {
-        var mouseScreenPosition = Input.mousePosition;
-        mouseScreenPosition.z = Camera.main.WorldToScreenPoint(transform.position).z;
-        var mouseWorldPosition = Camera.main.ScreenToWorldPoint(mouseScreenPosition);
+        var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
-        // var mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        var cellPosition = _grid.WorldToCell(mouseWorldPosition);
-        var cellCenterPosition = _grid.GetCellCenterWorld(cellPosition);
-
-        // Debug.Log(cellPosition.ToString());
-
-
-        // если выбрали тайл
-        if (_tile != null)
+        // Получаем координату куда указывает курсор на поле
+        if (Physics.Raycast(ray, out var hitInfo))
         {
-            // постоянно меняем позицию тайла, чтобы он был равен позиции курсора
-            _tile.transform.position = cellCenterPosition;
+            var worldPosition = hitInfo.point;
+            var cellPosition = _grid.WorldToCell(worldPosition);
+            var cellCenterPosition = _grid.GetCellCenterWorld(cellPosition);
 
-            // Красим тайл в соответсвии с возможностью построить
-            // Проверяем, чтобы координаты были внутри поля и что ячейка ещё не занята
-            if (cellPosition.x < 10 && cellPosition.x >= 0 && cellPosition.z >= 0 && cellPosition.z < 10 &&
-                !_areObjectsInCells[cellPosition.x, cellPosition.z])
+            // если тайл выбран
+            if (_tile != null)
             {
-                // Подсвечиваем все части тайла зеленым
-                foreach (var rend in _renderers)
-                {
-                    rend.material.color = _highlightingColorGreen;
-                }
+                // постоянно меняем позицию тайла, чтобы он был равен позиции курсора
+                _tile.transform.position = cellCenterPosition;
 
-                
-                if (Input.GetKeyDown(KeyCode.Mouse0))
+                // Красим тайл в соответсвии с возможностью построить
+                // Проверяем, чтобы координаты были внутри поля и что ячейка ещё не занята
+                if (cellPosition.x < 10 && cellPosition.x >= 0 && cellPosition.z >= 0 && cellPosition.z < 10 &&
+                    !_areObjectsInCells[cellPosition.x, cellPosition.z])
                 {
-                    // Возвращаем всем частям тайла оригинальный цвет
-                    for (var i = 0; i < _renderers.Length; i++)
+                    PaintTailToGreen();
+
+                    if (Input.GetKeyDown(KeyCode.Mouse0))
                     {
-                        _renderers[i].material.color = _originalColors[i];
+                        PaintTailToOrigin();
+
+                        // Открепляем ссылку на тайл, чтобы он оставался на выбранном месте
+                        _tile = null;
+
+                        // Отмечаем, что ячейка занята
+                        _areObjectsInCells[cellPosition.x, cellPosition.z] = true;
                     }
-                    
-                    // Открепляем ссылку на тайл, чтобы он оставался на выбранном месте
-                    _tile = null;
-                    
-                    // Отмечаем, что ячейка занята
-                    _areObjectsInCells[cellPosition.x, cellPosition.z] = true;
                 }
-            }
-            else
-            {
-                // Подсвечиваем все части тайла красным
-                foreach (var rend in _renderers)
+                else
                 {
-                    rend.material.color = _highlightingColorRed;
+                    PaintTailToRed();
                 }
             }
         }
     }
 
-    private void ChoosePlaceForTile()
+    private void PaintTailToRed()
     {
-        
+        // Подсвечиваем все части тайла красным
+        foreach (var rend in _renderers)
+        {
+            rend.material.color = _highlightingColorRed;
+        }
+    }
+    
+    private void PaintTailToGreen()
+    {
+        // Подсвечиваем все части тайла зеленым
+        foreach (var rend in _renderers)
+        {
+            rend.material.color = _highlightingColorGreen;
+        }
+    }
+    
+    private void PaintTailToOrigin()
+    {
+        // Возвращаем всем частям тайла оригинальный цвет
+        for (var i = 0; i < _renderers.Length; i++)
+        {
+            _renderers[i].material.color = _originalColors[i];
+        }
     }
 
     private void SaveTileOriginalColors()
